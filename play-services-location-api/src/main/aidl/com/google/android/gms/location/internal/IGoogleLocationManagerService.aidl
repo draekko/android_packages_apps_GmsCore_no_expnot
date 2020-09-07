@@ -11,7 +11,6 @@ import com.google.android.gms.location.internal.ISettingsCallbacks;
 import com.google.android.gms.location.internal.LocationRequestInternal;
 import com.google.android.gms.location.internal.LocationRequestUpdateData;
 import com.google.android.gms.location.internal.ParcelableGeofence;
-import com.google.android.gms.location.places.NearbyAlertRequest;
 import com.google.android.gms.location.places.PlaceFilter;
 import com.google.android.gms.location.places.PlaceRequest;
 import com.google.android.gms.location.places.PlaceReport;
@@ -77,7 +76,6 @@ interface IGoogleLocationManagerService {
     void iglms42(String var1, in PlacesParams var2, IPlacesCallbacks var3) = 41;
     void iglms46(in UserAddedPlace var1, in PlacesParams var2, IPlacesCallbacks var3) = 45;
     void iglms47(in LatLngBounds var1, int var2, String var3, in PlaceFilter var4, in PlacesParams var5, IPlacesCallbacks var6) = 46;
-    void iglms48(in NearbyAlertRequest var1, in PlacesParams var2, in PendingIntent var3) = 47;
     void iglms49(in PlacesParams var1, in PendingIntent var2) = 48;
     void iglms50(in UserDataType var1, in LatLngBounds var2, in List var3, in PlacesParams var4, IPlacesCallbacks var5) = 49;
     IBinder iglms54() = 53;

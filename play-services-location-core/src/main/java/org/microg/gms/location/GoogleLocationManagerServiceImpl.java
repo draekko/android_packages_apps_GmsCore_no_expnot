@@ -42,7 +42,6 @@ import com.google.android.gms.location.internal.LocationRequestInternal;
 import com.google.android.gms.location.internal.LocationRequestUpdateData;
 import com.google.android.gms.location.internal.ParcelableGeofence;
 import com.google.android.gms.location.places.AutocompleteFilter;
-import com.google.android.gms.location.places.NearbyAlertRequest;
 import com.google.android.gms.location.places.PlaceFilter;
 import com.google.android.gms.location.places.PlaceReport;
 import com.google.android.gms.location.places.PlaceRequest;
@@ -282,12 +281,6 @@ public class GoogleLocationManagerServiceImpl extends IGoogleLocationManagerServ
     public void iglms47(LatLngBounds var1, int var2, String var3, PlaceFilter var4,
                         PlacesParams var5, IPlacesCallbacks var6) throws RemoteException {
         Log.d(TAG, "iglms47: " + var1);
-    }
-
-    @Override
-    public void iglms48(NearbyAlertRequest var1, PlacesParams var2, PendingIntent var3)
-            throws RemoteException {
-        Log.d(TAG, "iglms48: " + var1);
     }
 
     @Override
