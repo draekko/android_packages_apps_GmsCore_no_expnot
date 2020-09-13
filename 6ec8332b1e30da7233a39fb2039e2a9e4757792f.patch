@@ -1,0 +1,102 @@
+From 6ec8332b1e30da7233a39fb2039e2a9e4757792f Mon Sep 17 00:00:00 2001
+From: Marvin W <git@larma.de>
+Date: Wed, 9 Sep 2020 00:49:05 +0200
+Subject: [PATCH] GCM: Ensure we have a context for preferences
+
+---
+ .../src/main/java/org/microg/gms/gcm/McsService.java | 12 ++++++------
+ .../java/org/microg/gms/gcm/TriggerReceiver.java     |  2 +-
+ .../java/org/microg/gms/ui/GcmAdvancedFragment.java  |  2 +-
+ .../main/kotlin/org/microg/gms/gcm/ServiceInfo.kt    |  2 +-
+ 4 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/play-services-core/src/main/java/org/microg/gms/gcm/McsService.java b/play-services-core/src/main/java/org/microg/gms/gcm/McsService.java
+index 03dc0d97..328378c8 100644
+--- a/play-services-core/src/main/java/org/microg/gms/gcm/McsService.java
++++ b/play-services-core/src/main/java/org/microg/gms/gcm/McsService.java
+@@ -235,18 +235,18 @@ public IBinder onBind(Intent intent) {
+         return null;
+     }
+ 
+-    public synchronized static boolean isConnected() {
++    public synchronized static boolean isConnected(Context context) {
+         if (inputStream == null || !inputStream.isAlive() || outputStream == null || !outputStream.isAlive()) {
+             logd(null, "Connection is not enabled or dead.");
+             return false;
+         }
+         // consider connection to be dead if we did not receive an ack within twice the heartbeat interval
+-        int heartbeatMs = GcmPrefs.get(null).getHeartbeatMsFor(activeNetworkPref, false);
++        int heartbeatMs = GcmPrefs.get(context).getHeartbeatMsFor(activeNetworkPref, false);
+         if (heartbeatMs < 0) {
+             closeAll();
+         } else if (SystemClock.elapsedRealtime() - lastHeartbeatAckElapsedRealtime > 2 * heartbeatMs) {
+             logd(null, "No heartbeat for " + (SystemClock.elapsedRealtime() - lastHeartbeatAckElapsedRealtime) / 1000 + " seconds, connection assumed to be dead after " + 2 * heartbeatMs / 1000 + " seconds");
+-            GcmPrefs.get(null).learnTimeout(activeNetworkPref);
++            GcmPrefs.get(context).learnTimeout(activeNetworkPref);
+             return false;
+         }
+         return true;
+@@ -649,13 +649,13 @@ public boolean handleMessage(android.os.Message msg) {
+                 return true;
+             case MSG_CONNECT:
+                 logd(this, "Connect initiated, reason: " + msg.obj);
+-                if (!isConnected()) {
++                if (!isConnected(this)) {
+                     connect();
+                 }
+                 return true;
+             case MSG_HEARTBEAT:
+                 logd(this, "Heartbeat initiated, reason: " + msg.obj);
+-                if (isConnected()) {
++                if (isConnected(this)) {
+                     HeartbeatPing.Builder ping = new HeartbeatPing.Builder();
+                     if (inputStream.newStreamIdAvailable()) {
+                         ping.last_stream_id_received(inputStream.getStreamId());
+@@ -669,7 +669,7 @@ public boolean handleMessage(android.os.Message msg) {
+                 return true;
+             case MSG_ACK:
+                 logd(this, "Ack initiated, reason: " + msg.obj);
+-                if (isConnected()) {
++                if (isConnected(this)) {
+                     IqStanza.Builder iq = new IqStanza.Builder()
+                             .type(IqStanza.IqType.SET)
+                             .id("")
+diff --git a/play-services-core/src/main/java/org/microg/gms/gcm/TriggerReceiver.java b/play-services-core/src/main/java/org/microg/gms/gcm/TriggerReceiver.java
+index 1166f385..9b16fe17 100644
+--- a/play-services-core/src/main/java/org/microg/gms/gcm/TriggerReceiver.java
++++ b/play-services-core/src/main/java/org/microg/gms/gcm/TriggerReceiver.java
+@@ -86,7 +86,7 @@ public void onReceive(Context context, Intent intent) {
+                 }
+             }
+ 
+-            if (!McsService.isConnected() || force) {
++            if (!McsService.isConnected(context) || force) {
+                 Log.d(TAG, "Not connected to GCM but should be, asking the service to start up. Triggered by: " + intent);
+                 startWakefulService(new ForegroundServiceContext(context), new Intent(ACTION_CONNECT, null, context, McsService.class)
+                         .putExtra(EXTRA_REASON, intent));
+diff --git a/play-services-core/src/main/java/org/microg/gms/ui/GcmAdvancedFragment.java b/play-services-core/src/main/java/org/microg/gms/ui/GcmAdvancedFragment.java
+index 0b66c013..054e98c5 100644
+--- a/play-services-core/src/main/java/org/microg/gms/ui/GcmAdvancedFragment.java
++++ b/play-services-core/src/main/java/org/microg/gms/ui/GcmAdvancedFragment.java
+@@ -52,7 +52,7 @@ public boolean onPreferenceChange(Preference preference, Object newValue) {
+                     updateContent();
+                     if (newValue.equals("-1") && preference.getKey().equals(McsService.activeNetworkPref)) {
+                         McsService.stop(getContext());
+-                    } else if (!McsService.isConnected()) {
++                    } else if (!McsService.isConnected(getContext())) {
+                         getContext().sendBroadcast(new Intent(TriggerReceiver.FORCE_TRY_RECONNECT, null, getContext(), TriggerReceiver.class));
+                     }
+                     return true;
+diff --git a/play-services-core/src/main/kotlin/org/microg/gms/gcm/ServiceInfo.kt b/play-services-core/src/main/kotlin/org/microg/gms/gcm/ServiceInfo.kt
+index ade5652d..adbe946f 100644
+--- a/play-services-core/src/main/kotlin/org/microg/gms/gcm/ServiceInfo.kt
++++ b/play-services-core/src/main/kotlin/org/microg/gms/gcm/ServiceInfo.kt
+@@ -38,7 +38,7 @@ class ServiceInfoReceiver : BroadcastReceiver() {
+     private fun sendInfoResponse(context: Context) {
+         context.sendOrderedBroadcast(Intent(ACTION_SERVICE_INFO_RESPONSE).apply {
+             setPackage(context.packageName)
+-            putExtra(EXTRA_SERVICE_INFO, ServiceInfo(GcmPrefs.get(context).toConfiguration(), McsService.isConnected(), McsService.getStartTimestamp()))
++            putExtra(EXTRA_SERVICE_INFO, ServiceInfo(GcmPrefs.get(context).toConfiguration(), McsService.isConnected(context), McsService.getStartTimestamp()))
+         }, null)
+     }
+ 
