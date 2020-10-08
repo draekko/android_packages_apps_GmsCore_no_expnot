@@ -16,6 +16,7 @@
 
 package org.microg.gms.maps.mapbox.model
 
+import android.os.Parcel
 import android.util.Log
 import com.google.android.gms.dynamic.IObjectWrapper
 import com.google.android.gms.dynamic.ObjectWrapper
@@ -224,6 +225,13 @@ class MarkerImpl(private val map: GoogleMapImpl, private val id: String, options
     }
 
     override fun getTag(): IObjectWrapper = tag ?: ObjectWrapper.wrap(null)
+
+    override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean =
+            if (super.onTransact(code, data, reply, flags)) {
+                true
+            } else {
+                Log.d(TAG, "onTransact [unknown]: $code, $data, $flags"); false
+            }
 
     companion object {
         private val TAG = "GmsMapMarker"
